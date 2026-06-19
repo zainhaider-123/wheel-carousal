@@ -25,6 +25,8 @@ Convert the existing GSAP-based wheel carousel in `main.js` to pure vanilla Java
 - [x] **Path alignment fix**: boxes are translated by the SVG's actual offset inside `.wrapper`, so they sit exactly on the generated arc path
 - [x] **Centering fix**: arc is recalculated relative to wrapper width/height; initial progress centers the middle box
 - [x] Window resize recalculates arc and re-renders carousel
+- [x] Added config properties for looping and autoplay with pause-on-hover/drag
+- [x] Autoplay now runs as a continuous marquee via requestAnimationFrame instead of stepping
 - [x] Wired prev/next buttons and overflow/path toggle
 - [x] Boxes are read from static HTML (no dynamic `.box` creation)
 - [x] Browser testing skipped per user request

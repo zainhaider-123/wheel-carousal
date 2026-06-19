@@ -22,7 +22,13 @@ const config = {
   animationDurationMs: 600,
   useBackEase: true,
 
-  showOverflow: false
+  showOverflow: false,
+
+  loop: true,
+  autoplay: true,
+  marqueeSpeed: 0.02,   // progress units per second; positive/negative sets direction
+  pauseAutoplayOnHover: true,
+  pauseAutoplayOnDrag: true
 }
 
 // ============================================================
@@ -105,6 +111,8 @@ let circumference = 0
 let currentProgress = 0
 let activeTween = null
 let arc = null
+let autoplayTimer = null
+let autoplayPaused = false
 
 // ============================================================
 // Core carousel maths – driven by the actual number of boxes in the DOM
@@ -142,6 +150,7 @@ if (numBoxes > 1) {
   createControls()
   applyToggles()
   renderCarousel(currentProgress)
+  startAutoplay()
   window.addEventListener('resize', () => {
     computeArc(numPositions)
     renderCarousel(currentProgress)
@@ -162,11 +171,13 @@ function initBoxes() {
     box.addEventListener('mouseenter', () => {
       boxStates[i].hovered = true
       renderCarousel(currentProgress)
+      if (config.pauseAutoplayOnHover) pauseAutoplay()
     })
 
     box.addEventListener('mouseleave', () => {
       boxStates[i].hovered = false
       renderCarousel(currentProgress)
+      if (config.pauseAutoplayOnHover) resumeAutoplay()
     })
 
     box.addEventListener('click', () => {
@@ -226,10 +237,23 @@ function calculateInitialProgress() {
   return clamp(p, positionStep, 1 - positionStep)
 }
 
+function wrapProgress(progress) {
+  const min = positionStep
+  const max = 1 - positionStep
+  const range = max - min
+  return ((progress - min) % range + range) % range + min
+}
+
 function moveToProgress(progress) {
   collapse()
 
-  const target = snapProgress(progress)
+  let target = progress
+  if (config.loop) {
+    target = wrapProgress(progress)
+  } else {
+    target = clamp(progress, positionStep, 1 - positionStep)
+  }
+  target = snapProgress(target)
 
   if (activeTween) activeTween.stop()
 
@@ -260,6 +284,60 @@ function activateBox(i) {
 }
 
 // ============================================================
+// Autoplay
+// ============================================================
+function startAutoplay() {
+  if (!config.autoplay || numBoxes <= 1) return
+  stopAutoplay()
+  autoplayPaused = false
+  let lastTime = performance.now()
+
+  function tick(now) {
+    if (autoplayPaused) {
+      lastTime = now
+      autoplayTimer = requestAnimationFrame(tick)
+      return
+    }
+
+    const dt = (now - lastTime) / 1000
+    lastTime = now
+
+    let nextProgress = currentProgress + config.marqueeSpeed * dt
+
+    if (config.loop) {
+      nextProgress = ((nextProgress % 1) + 1) % 1
+    } else {
+      nextProgress = clamp(nextProgress, positionStep, 1 - positionStep)
+      if (nextProgress <= positionStep || nextProgress >= 1 - positionStep) {
+        stopAutoplay()
+        return
+      }
+    }
+
+    currentProgress = nextProgress
+    renderCarousel(currentProgress)
+    autoplayTimer = requestAnimationFrame(tick)
+  }
+
+  autoplayTimer = requestAnimationFrame(tick)
+}
+
+function stopAutoplay() {
+  if (autoplayTimer) {
+    cancelAnimationFrame(autoplayTimer)
+    autoplayTimer = null
+  }
+}
+
+function pauseAutoplay() {
+  autoplayPaused = true
+}
+
+function resumeAutoplay() {
+  autoplayPaused = false
+}
+
+// ============================================================
 // Draggable – replaces GSAP Draggable + InertiaPlugin
 // ============================================================
 function createDraggable() {
@@ -278,6 +356,7 @@ function createDraggable() {
     wrapper.classList.add('dragging')
     collapse()
     if (activeTween) activeTween.stop()
+    if (config.pauseAutoplayOnDrag) pauseAutoplay()
   })
 
   window.addEventListener('pointermove', (e) => {
@@ -294,6 +373,7 @@ function createDraggable() {
     isDragging = false
     wrapper.classList.remove('dragging')
     moveToProgress(currentProgress)
+    if (config.pauseAutoplayOnDrag) resumeAutoplay()
   })
 
   window.addEventListener('pointercancel', () => {
@@ -301,6 +381,7 @@ function createDraggable() {
     isDragging = false
     wrapper.classList.remove('dragging')
     moveToProgress(currentProgress)
+    if (config.pauseAutoplayOnDrag) resumeAutoplay()
   })
 }
 
