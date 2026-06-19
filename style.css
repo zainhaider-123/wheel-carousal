@@ -1,0 +1,56 @@
+body {
+  background: #1d1d1d;
+  font-family: Asap, sans-serif;
+}
+
+.wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 100vh;
+  margin: auto;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+.wrapper.show-overflow {
+  overflow: visible;
+}
+
+.draggable {
+  position: static;
+  top: 96px;
+  width: 100%;
+  height: 100%;
+}
+
+.box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: .3;
+  width: 320px;
+  height: 500px;
+  font-size: 25px;
+  line-height: 128px;
+  text-align: center;
+  background: #f38630;
+  z-index: 1;
+  cursor: pointer;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+  will-change: transform;
+}
+
+.wrapper.dragging .box {
+  transition: none;
+}
+
+.nav {
+  position: relative;
+  text-align: center;
+  color: white;
+  font-size: 20px;
+  margin: 20px 0;
+}
