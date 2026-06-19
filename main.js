@@ -10,7 +10,7 @@ const config = {
 
   pathRadius: 1280,
   positionAngleInDegrees: 8,
-  pathTopOffset: 96,
+  pathTopOffset: 300,
 
   normalScale: 1,
   hoverScale: 1,
