@@ -8,12 +8,23 @@ const config = {
   boxColors: ['#f38630', '#6fb936', '#ccc', '#6fb936'],
   activeColor: '#ff0000',
 
-  pathRadius: 2560,
+  pathRadius: 1920,
   pathTopOffset: 300,
 
-  // Carousel geometry. Set visibleBoxes to match the number of .box elements in HTML.
-  visibleBoxes: 7,   // how many boxes span the visible arc
-  boxSpacing: 17,    // degrees between adjacent boxes
+  // Carousel geometry. visibleBoxes controls how many boxes are visible at once.
+  // For a seamless loop it must be at most half the number of .box elements in HTML.
+  visibleBoxes: {
+    1336: 6,
+    1036: 6,
+    767: 5,
+    0: 4,
+  },
+  boxSpacing: {
+    1336: 22,
+    1036: 20,
+    767: 18,
+    0: 16,
+  },    // responsive object degrees between adjacent boxes
 
   normalScale: 1,
   hoverScale: 1,
@@ -56,6 +67,20 @@ function snap(values) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value))
+}
+
+function resolveResponsive(value) {
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const width = window.innerWidth
+    const breakpoints = Object.keys(value)
+      .map(Number)
+      .sort((a, b) => b - a)
+    for (const bp of breakpoints) {
+      if (width >= bp) return value[bp]
+    }
+    return value[breakpoints[breakpoints.length - 1]]
+  }
+  return value
 }
 
 function easeOutBack(t) {
@@ -119,27 +144,52 @@ let autoplayPaused = false
 // ============================================================
 // Core carousel maths – driven by the actual number of boxes in the DOM
 // ============================================================
-// visibleBoxes should match the number of .box elements in your HTML.
-const numBoxes = boxes.length || config.visibleBoxes
-const numPositions = config.visibleBoxes * 2
-const positionStep = 1 / numPositions
-const minEnd = 0.5 + positionStep
-const angleInDegrees = config.visibleBoxes * config.boxSpacing
-
-// One full marquee cycle is the progress distance after which the box pattern repeats.
-const cycleProgress = numBoxes * positionStep / minEnd
-const boxAdvance = positionStep / minEnd
-
-// Snap positions are the progress values that center each box at the top of the arc.
-const snapValues = []
-for (let i = 0; i < numBoxes; i++) {
-  let center = (0.5 - i * positionStep) / minEnd
-  center = ((center % cycleProgress) + cycleProgress) % cycleProgress
-  snapValues.push(center)
-}
-
-const snapProgress = snap(snapValues)
+const numBoxes = boxes.length || 1
 const colorForIndex = wrap(config.boxColors)
+
+let visibleBoxes = config.visibleBoxes
+let boxSpacing = config.boxSpacing
+let numPositions = 0
+let positionStep = 0
+let minEnd = 0
+let angleInDegrees = 0
+let cycleProgress = 0
+let boxAdvance = 0
+let snapValues = []
+let snapProgress = null
+
+function computeGeometry() {
+  visibleBoxes = resolveResponsive(config.visibleBoxes)
+  boxSpacing = resolveResponsive(config.boxSpacing)
+
+  if (numBoxes <= 1) return
+
+  // Cap visible boxes to the actual number of boxes so we never try to show
+  // more boxes than exist in the HTML.
+  const effectiveBoxes = Math.min(visibleBoxes, numBoxes)
+  if (effectiveBoxes < visibleBoxes) {
+    console.warn(`visibleBoxes (${visibleBoxes}) capped to ${effectiveBoxes} because there are only ${numBoxes} .box elements in the HTML.`)
+  }
+
+  angleInDegrees = effectiveBoxes * boxSpacing
+  numPositions = effectiveBoxes
+  positionStep = 1 / numPositions
+  minEnd = 0.5 + positionStep
+
+  // One full marquee cycle is the progress distance after which the box pattern repeats.
+  cycleProgress = numBoxes * positionStep / minEnd
+  boxAdvance = positionStep / minEnd
+
+  // Snap positions are the progress values that center each box at the top of the arc.
+  snapValues = []
+  for (let i = 0; i < numBoxes; i++) {
+    let center = (0.5 - i * positionStep) / minEnd
+    center = ((center % cycleProgress) + cycleProgress) % cycleProgress
+    snapValues.push(center)
+  }
+
+  snapProgress = snap(snapValues)
+}
 
 // ============================================================
 // Setup
@@ -148,6 +198,7 @@ console.clear()
 console.log('Carousel config:', config)
 console.log('Boxes found:', numBoxes)
 
+computeGeometry()
 computeArc(numPositions)
 initBoxes()
 buildRenderBoxes()
@@ -160,7 +211,9 @@ if (numBoxes > 1) {
   renderCarousel(currentProgress)
   startAutoplay()
   window.addEventListener('resize', () => {
+    computeGeometry()
     computeArc(numPositions)
+    rebuildRenderBoxes()
     renderCarousel(currentProgress)
   })
 } else {
@@ -304,6 +357,14 @@ function activateBox(i) {
 // ============================================================
 // Marquee instances – duplicate boxes so the loop appears seamless
 // ============================================================
+function removeClones() {
+  renderBoxes.forEach((item) => {
+    if (item.offset !== 0) {
+      item.element.remove()
+    }
+  })
+}
+
 function buildRenderBoxes() {
   renderBoxes = []
   // Offsets of -1, 0, +1 cycles are enough to cover the visible arc during rotation.
@@ -339,6 +400,11 @@ function buildRenderBoxes() {
       renderBoxes.push({ element: el, originalIndex: i, offset })
     })
   })
+}
+
+function rebuildRenderBoxes() {
+  removeClones()
+  buildRenderBoxes()
 }
 
 // ============================================================
