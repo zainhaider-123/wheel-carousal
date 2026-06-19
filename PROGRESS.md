@@ -16,18 +16,18 @@ Convert the existing GSAP-based wheel carousel in `main.js` to pure vanilla Java
   - `pathRadius`, `pathTopOffset`, `visibleBoxes`, `boxSpacing`
   - `normalScale`, `hoverScale`, `activeScale`
   - `animationDurationMs`, `useBackEase`
-  - `showOverflow`, `showPath`
+  - `showOverflow`
 - [x] Replaced GSAP utilities with small vanilla helpers (`toArray`, `wrap`, `normalize`, `snap`, `clamp`, `easeOutBack`)
 - [x] Replaced `gsap.to`/`gsap.timeline` with a tiny `requestAnimationFrame` tween engine
 - [x] Replaced `MotionPathPlugin` with pure math (circular arc) and manual tangent angle
 - [x] Replaced `Draggable` with native `pointerdown`/`pointermove`/`pointerup` events
 - [x] Replaced hover/click tweens with state-driven `renderCarousel()` + CSS transitions
-- [x] **Path alignment fix**: boxes are translated by the SVG's actual offset inside `.wrapper`, so they sit exactly on the generated arc path
 - [x] **Centering fix**: arc is recalculated relative to wrapper width/height; initial progress centers the middle box
 - [x] Window resize recalculates arc and re-renders carousel
 - [x] Added config properties for looping and autoplay with pause-on-hover/drag
 - [x] Autoplay now runs as a continuous marquee via requestAnimationFrame instead of stepping
-- [x] Wired prev/next buttons and overflow/path toggle
+- [x] **Seamless marquee loop**: clones boxes at ±1 cycle offsets so items flow continuously without gaps
+- [x] Wired prev/next buttons and overflow toggle
 - [x] Boxes are read from static HTML (no dynamic `.box` creation)
 - [x] Browser testing skipped per user request
 
@@ -40,10 +40,9 @@ Convert the existing GSAP-based wheel carousel in `main.js` to pure vanilla Java
    - Hover scales a box up.
    - Prev/Next buttons rotate the carousel.
    - Dragging left/right rotates the carousel and snaps to a box on release.
-   - "Show path" reveals the SVG arc.
    - "Show overflow" reveals boxes outside the wrapper bounds.
 
 ## Notes
 - The original GSAP back-out ease is replicated with the standard `c1 = 1.70158` back-out formula.
-- The generated SVG arc matches the original: radius 1280, arc span = `numBoxes * 2 * positionAngleInDegrees`.
-- Drag bounds match the original (`positionStep` to `1 - positionStep`).
+- The arc is generated mathematically (no SVG element) with radius `config.pathRadius` and span `config.visibleBoxes * config.boxSpacing`.
+- Drag bounds cover one full seamless cycle (`0` to `cycleProgress`).

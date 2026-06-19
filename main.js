@@ -22,8 +22,6 @@ const config = {
   animationDurationMs: 600,
   useBackEase: true,
 
-  showOverflow: false,
-
   loop: true,
   autoplay: true,
   marqueeSpeed: 0.02,   // progress units per second; positive/negative sets direction
@@ -105,6 +103,9 @@ const wrapper = document.querySelector('.wrapper')
 // Use the boxes already present in the HTML.
 let boxes = toArray('.box', wrapper)
 let boxStates = boxes.map(() => ({ hovered: false, active: false }))
+let renderBoxes = []
+
+const draggableEl = wrapper.querySelector('.draggable')
 
 let pathLength = 0
 let circumference = 0
@@ -112,6 +113,7 @@ let currentProgress = 0
 let activeTween = null
 let arc = null
 let autoplayTimer = null
+let autoplayPauseCount = 0
 let autoplayPaused = false
 
 // ============================================================
@@ -119,19 +121,24 @@ let autoplayPaused = false
 // ============================================================
 // visibleBoxes should match the number of .box elements in your HTML.
 const numBoxes = boxes.length || config.visibleBoxes
-const boxStep = 1 / (numBoxes + 1)
 const numPositions = config.visibleBoxes * 2
 const positionStep = 1 / numPositions
 const minEnd = 0.5 + positionStep
 const angleInDegrees = config.visibleBoxes * config.boxSpacing
 
+// One full marquee cycle is the progress distance after which the box pattern repeats.
+const cycleProgress = numBoxes * positionStep / minEnd
+const boxAdvance = positionStep / minEnd
+
+// Snap positions are the progress values that center each box at the top of the arc.
 const snapValues = []
-for (let i = 1; i <= numBoxes; i++) {
-  snapValues.push(i * boxStep)
+for (let i = 0; i < numBoxes; i++) {
+  let center = (0.5 - i * positionStep) / minEnd
+  center = ((center % cycleProgress) + cycleProgress) % cycleProgress
+  snapValues.push(center)
 }
 
 const snapProgress = snap(snapValues)
-const normalizeProgress = normalize(1, 0)
 const colorForIndex = wrap(config.boxColors)
 
 // ============================================================
@@ -143,6 +150,7 @@ console.log('Boxes found:', numBoxes)
 
 computeArc(numPositions)
 initBoxes()
+buildRenderBoxes()
 
 if (numBoxes > 1) {
   currentProgress = calculateInitialProgress()
@@ -167,25 +175,6 @@ function initBoxes() {
   boxes.forEach((box, i) => {
     box.style.backgroundColor = colorForIndex(i)
     box.style.transformOrigin = '50% 50%'
-
-    box.addEventListener('mouseenter', () => {
-      boxStates[i].hovered = true
-      renderCarousel(currentProgress)
-      if (config.pauseAutoplayOnHover) pauseAutoplay()
-    })
-
-    box.addEventListener('mouseleave', () => {
-      boxStates[i].hovered = false
-      renderCarousel(currentProgress)
-      if (config.pauseAutoplayOnHover) resumeAutoplay()
-    })
-
-    box.addEventListener('click', () => {
-      collapse(i)
-      activateBox(i)
-      const targetProgress = normalizeProgress(snapValues[i])
-      moveToProgress(targetProgress)
-    })
   })
 }
 
@@ -195,10 +184,20 @@ function initBoxes() {
 function renderCarousel(progress) {
   if (!arc) return
 
-  boxes.forEach((box, i) => {
+  renderBoxes.forEach((item) => {
+    const i = item.originalIndex
+    const box = item.element
+    const effectiveProgress = progress + item.offset
     const start = i * positionStep
-    const end = minEnd + i * positionStep
-    const pathProgress = clamp(start + progress * (end - start), 0, 1)
+    const pathProgress = start + effectiveProgress * minEnd
+
+    // Only render instances that fall on the visible arc.
+    if (pathProgress < 0 || pathProgress > 1) {
+      box.style.display = 'none'
+      return
+    }
+
+    box.style.display = 'block'
 
     const angleRad = arc.startAngle + pathProgress * (arc.endAngle - arc.startAngle)
     const p = {
@@ -234,37 +233,56 @@ function calculateInitialProgress() {
   const middleIndex = Math.floor((numBoxes - 1) / 2)
   let p = (0.5 - middleIndex * positionStep) / minEnd
   if (numBoxes < 5) p = 0.5 / minEnd
-  return clamp(p, positionStep, 1 - positionStep)
+  return ((p % cycleProgress) + cycleProgress) % cycleProgress
 }
 
 function wrapProgress(progress) {
-  const min = positionStep
-  const max = 1 - positionStep
-  const range = max - min
-  return ((progress - min) % range + range) % range + min
+  return ((progress % cycleProgress) + cycleProgress) % cycleProgress
 }
 
-function moveToProgress(progress) {
+function moveToProgress(progress, direction = 0) {
   collapse()
 
   let target = progress
   if (config.loop) {
     target = wrapProgress(progress)
   } else {
-    target = clamp(progress, positionStep, 1 - positionStep)
+    target = clamp(progress, 0, cycleProgress)
   }
   target = snapProgress(target)
 
   if (activeTween) activeTween.stop()
 
+  let from = currentProgress
+  let to = target
+
+  // When looping, animate across the cycle boundary in the requested direction
+  // instead of snapping backwards.
+  if (config.loop) {
+    const diff = target - from
+    if (direction > 0 && diff < 0) {
+      to = target + cycleProgress
+    } else if (direction < 0 && diff > 0) {
+      to = target - cycleProgress
+    }
+  }
+
+  pauseAutoplay()
   activeTween = tween({
-    from: currentProgress,
-    to: target,
+    from,
+    to,
     duration: config.animationDurationMs,
     ease: config.useBackEase ? easeOutBack : (t) => t,
     onUpdate: (p) => {
       currentProgress = p
       renderCarousel(p)
+    },
+    onComplete: () => {
+      if (config.loop) {
+        currentProgress = wrapProgress(currentProgress)
+        renderCarousel(currentProgress)
+      }
+      resumeAutoplay()
     }
   })
 }
@@ -281,6 +299,46 @@ function collapse(except = null) {
 function activateBox(i) {
   boxStates[i].active = true
   renderCarousel(currentProgress)
+}
+
+// ============================================================
+// Marquee instances – duplicate boxes so the loop appears seamless
+// ============================================================
+function buildRenderBoxes() {
+  renderBoxes = []
+  // Offsets of -1, 0, +1 cycles are enough to cover the visible arc during rotation.
+  const cycleOffsets = config.loop ? [-cycleProgress, 0, cycleProgress] : [0]
+
+  cycleOffsets.forEach((offset) => {
+    boxes.forEach((box, i) => {
+      const el = offset === 0 ? box : box.cloneNode(true)
+      if (offset !== 0) {
+        el.style.backgroundColor = colorForIndex(i)
+        el.style.transformOrigin = '50% 50%'
+        draggableEl.appendChild(el)
+      }
+
+      el.addEventListener('mouseenter', () => {
+        boxStates[i].hovered = true
+        renderCarousel(currentProgress)
+        if (config.pauseAutoplayOnHover) pauseAutoplay()
+      })
+
+      el.addEventListener('mouseleave', () => {
+        boxStates[i].hovered = false
+        renderCarousel(currentProgress)
+        if (config.pauseAutoplayOnHover) resumeAutoplay()
+      })
+
+      el.addEventListener('click', () => {
+        collapse(i)
+        activateBox(i)
+        moveToProgress(snapValues[i])
+      })
+
+      renderBoxes.push({ element: el, originalIndex: i, offset })
+    })
+  })
 }
 
 // ============================================================
@@ -305,10 +363,10 @@ function startAutoplay() {
     let nextProgress = currentProgress + config.marqueeSpeed * dt
 
     if (config.loop) {
-      nextProgress = ((nextProgress % 1) + 1) % 1
+      nextProgress = wrapProgress(nextProgress)
     } else {
-      nextProgress = clamp(nextProgress, positionStep, 1 - positionStep)
-      if (nextProgress <= positionStep || nextProgress >= 1 - positionStep) {
+      nextProgress = clamp(nextProgress, 0, cycleProgress)
+      if (nextProgress <= 0 || nextProgress >= cycleProgress) {
         stopAutoplay()
         return
       }
@@ -330,19 +388,21 @@ function stopAutoplay() {
 }
 
 function pauseAutoplay() {
-  autoplayPaused = true
+  autoplayPauseCount++
+  autoplayPaused = autoplayPauseCount > 0
 }
 
 function resumeAutoplay() {
-  autoplayPaused = false
+  autoplayPauseCount = Math.max(0, autoplayPauseCount - 1)
+  autoplayPaused = autoplayPauseCount > 0
 }
 
 // ============================================================
 // Draggable – replaces GSAP Draggable + InertiaPlugin
 // ============================================================
 function createDraggable() {
-  const minProgress = positionStep
-  const maxProgress = 1 - positionStep
+  const minProgress = 0
+  const maxProgress = cycleProgress
   circumference = pathLength / 1.5
 
   let isDragging = false
@@ -363,7 +423,11 @@ function createDraggable() {
     if (!isDragging) return
     const dx = e.clientX - startX
     let p = startProgress + dx / circumference
-    p = clamp(p, minProgress, maxProgress)
+    if (config.loop) {
+      p = wrapProgress(p)
+    } else {
+      p = clamp(p, minProgress, maxProgress)
+    }
     currentProgress = p
     renderCarousel(p)
   })
@@ -393,11 +457,11 @@ function createControls() {
   const next = document.getElementById('next')
 
   prev.addEventListener('click', () => {
-    moveToProgress(currentProgress + boxStep)
+    moveToProgress(currentProgress + boxAdvance, 1)
   })
 
   next.addEventListener('click', () => {
-    moveToProgress(currentProgress - boxStep)
+    moveToProgress(currentProgress - boxAdvance, -1)
   })
 
   const overflow = document.getElementById('overflow')
