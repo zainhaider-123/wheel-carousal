@@ -13,7 +13,7 @@ Convert the existing GSAP-based wheel carousel in `main.js` to pure vanilla Java
 - [x] Explored original GSAP implementation (`MotionPathPlugin`, `Draggable`, `gsap.utils.*`, tweens)
 - [x] Created a `config` object at the top of `main.js` for carousel customization:
   - `boxColors`, `activeColor`
-  - `pathRadius`, `positionAngleInDegrees`, `pathTopOffset`
+  - `pathRadius`, `pathTopOffset`, `visibleBoxes`, `boxSpacing`
   - `normalScale`, `hoverScale`, `activeScale`
   - `animationDurationMs`, `useBackEase`
   - `showOverflow`, `showPath`

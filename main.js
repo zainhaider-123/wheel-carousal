@@ -8,9 +8,12 @@ const config = {
   boxColors: ['#f38630', '#6fb936', '#ccc', '#6fb936'],
   activeColor: '#ff0000',
 
-  pathRadius: 1280,
-  positionAngleInDegrees: 8,
+  pathRadius: 2560,
   pathTopOffset: 300,
+
+  // Carousel geometry. Set visibleBoxes to match the number of .box elements in HTML.
+  visibleBoxes: 7,   // how many boxes span the visible arc
+  boxSpacing: 17,    // degrees between adjacent boxes
 
   normalScale: 1,
   hoverScale: 1,
@@ -106,11 +109,13 @@ let arc = null
 // ============================================================
 // Core carousel maths – driven by the actual number of boxes in the DOM
 // ============================================================
-const numBoxes = boxes.length
+// visibleBoxes should match the number of .box elements in your HTML.
+const numBoxes = boxes.length || config.visibleBoxes
 const boxStep = 1 / (numBoxes + 1)
-const numPositions = numBoxes * 2
+const numPositions = config.visibleBoxes * 2
 const positionStep = 1 / numPositions
 const minEnd = 0.5 + positionStep
+const angleInDegrees = config.visibleBoxes * config.boxSpacing
 
 const snapValues = []
 for (let i = 1; i <= numBoxes; i++) {
@@ -328,7 +333,6 @@ function applyToggles() {
 // ============================================================
 function computeArc(numPositions) {
   const wrapperRect = wrapper.getBoundingClientRect()
-  const angleInDegrees = numPositions * config.positionAngleInDegrees
   const angleInRadians = angleInDegrees * (Math.PI / 180)
 
   // Center the arc horizontally within the wrapper and keep the top of the arc
