@@ -37,7 +37,7 @@ const config = {
 
   loop: true,
   autoplay: true,
-  marqueeSpeed: 0.02,   // progress units per second; positive/negative sets direction
+  marqueeSpeed: 0.1,    // progress units per second; positive/negative sets direction
   pauseAutoplayOnHover: true,
   pauseAutoplayOnDrag: true
 }
@@ -149,6 +149,8 @@ let arc = null
 let autoplayTimer = null
 let autoplayPauseCount = 0
 let autoplayPaused = false
+let boxWidth = 0
+let boxHeight = 0
 
 // ============================================================
 // Core carousel maths – driven by the actual number of boxes in the DOM
@@ -203,32 +205,49 @@ function computeGeometry() {
 // ============================================================
 // Setup
 // ============================================================
-console.clear()
-console.log('Carousel config:', config)
-console.log('Boxes found:', numBoxes)
-
-computeGeometry()
-computeArc(numPositions)
-initBoxes()
-buildRenderBoxes()
-
-if (numBoxes > 1) {
-  currentProgress = calculateInitialProgress()
-  createDraggable()
-  createControls()
-  applyToggles()
-  renderCarousel(currentProgress)
-  startAutoplay()
-  window.addEventListener('resize', () => {
-    computeGeometry()
-    computeArc(numPositions)
-    rebuildRenderBoxes()
-    renderCarousel(currentProgress)
-  })
-} else {
-  currentProgress = 0.5
-  renderCarousel(currentProgress)
+function measureBoxDimensions() {
+  // Use the first original box to get rendered dimensions so we don't depend on
+  // boxes being visible and the layout being fully resolved during first render.
+  const sample = boxes[0]
+  if (sample) {
+    const rect = sample.getBoundingClientRect()
+    boxWidth = rect.width || sample.offsetWidth || 319
+    boxHeight = rect.height || sample.offsetHeight || 405
+  }
 }
+
+function initCarousel() {
+  console.clear()
+  console.log('Carousel config:', config)
+  console.log('Boxes found:', numBoxes)
+
+  computeGeometry()
+  computeArc(numPositions)
+  initBoxes()
+  buildRenderBoxes()
+  measureBoxDimensions()
+
+  if (numBoxes > 1) {
+    currentProgress = calculateInitialProgress()
+    createDraggable()
+    createControls()
+    renderCarousel(currentProgress)
+    startAutoplay()
+    window.addEventListener('resize', () => {
+      computeGeometry()
+      computeArc(numPositions)
+      measureBoxDimensions()
+      rebuildRenderBoxes()
+      renderCarousel(currentProgress)
+    })
+  } else {
+    currentProgress = 0.5
+    renderCarousel(currentProgress)
+  }
+}
+
+// Defer until the next frame so styles/layout are resolved before the first render.
+requestAnimationFrame(initCarousel)
 
 // ============================================================
 // Box styling & events
@@ -253,13 +272,11 @@ function renderCarousel(progress) {
     const start = i * positionStep
     const pathProgress = start + effectiveProgress * minEnd
 
-    // Only render instances that fall on the visible arc.
-    if (pathProgress < 0 || pathProgress > 1) {
-      box.style.display = 'none'
-      return
-    }
-
-    box.style.display = 'block'
+    // Use visibility instead of display so transforms stay up-to-date while a box
+    // is hidden. With display:none, the transform was frozen at the old edge
+    // position, so a box would fly across the screen when it re-entered the arc.
+    const isVisible = pathProgress >= 0 && pathProgress <= 1
+    box.style.visibility = isVisible ? 'visible' : 'hidden'
 
     const angleRad = arc.startAngle + pathProgress * (arc.endAngle - arc.startAngle)
     const p = {
@@ -277,8 +294,8 @@ function renderCarousel(progress) {
 
     const bg = state.active ? config.activeColor : colorForIndex(i)
 
-    const x = p.x - box.offsetWidth / 2
-    const y = p.y - box.offsetHeight / 2
+    const x = p.x - boxWidth / 2
+    const y = p.y - boxHeight / 2
 
     // z-index based on y gives natural depth (lower y = further back).
     box.style.zIndex = Math.round(p.y)
@@ -313,7 +330,11 @@ function moveToProgress(progress, direction = 0) {
   }
   target = snapProgress(target)
 
-  if (activeTween) activeTween.stop()
+  if (activeTween) {
+    activeTween.stop()
+    activeTween = null
+    resumeAutoplay() // balance the pause from the tween that won't complete
+  }
 
   let from = currentProgress
   let to = target
@@ -617,7 +638,6 @@ function createDraggable() {
     if (!isDragging) return
     isDragging = false
     wrapper.classList.remove('dragging')
-    moveToProgress(currentProgress)
     if (config.pauseAutoplayOnDrag) resumeAutoplay()
   })
 
@@ -625,7 +645,6 @@ function createDraggable() {
     if (!isDragging) return
     isDragging = false
     wrapper.classList.remove('dragging')
-    moveToProgress(currentProgress)
     if (config.pauseAutoplayOnDrag) resumeAutoplay()
   })
 }
@@ -637,21 +656,18 @@ function createControls() {
   const prev = document.getElementById('prev')
   const next = document.getElementById('next')
 
-  prev.addEventListener('click', () => {
-    moveToProgress(currentProgress + boxAdvance, 1)
-  })
+  if (prev) {
+    prev.addEventListener('click', () => {
+      moveToProgress(currentProgress + boxAdvance, 1)
+    })
+  }
 
-  next.addEventListener('click', () => {
-    moveToProgress(currentProgress - boxAdvance, -1)
-  })
+  if (next) {
+    next.addEventListener('click', () => {
+      moveToProgress(currentProgress - boxAdvance, -1)
+    })
+  }
 
-  const overflow = document.getElementById('overflow')
-  if (overflow) overflow.addEventListener('change', applyToggles)
-}
-
-function applyToggles() {
-  const overflow = document.getElementById('overflow')
-  wrapper.classList.toggle('show-overflow', overflow ? overflow.checked : config.showOverflow)
 }
 
 // ============================================================

@@ -14,10 +14,6 @@
   user-select: none;
 }
 
-.wrapper.show-overflow {
-  overflow: visible;
-}
-
 .draggable {
   position: static;
   top: 96px;
@@ -36,7 +32,7 @@
   text-align: center;
   z-index: 1;
   cursor: pointer;
-  transition: transform 0.3s ease, background-color 0.3s ease;
+  transition: background-color 0.3s ease;
   will-change: transform;
 }
 
