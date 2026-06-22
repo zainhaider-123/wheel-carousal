@@ -14,10 +14,6 @@
   user-select: none;
 }
 
-.wrapper.show-overflow {
-  overflow: visible;
-}
-
 .draggable {
   position: static;
   top: 96px;

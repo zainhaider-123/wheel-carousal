@@ -231,7 +231,6 @@ function initCarousel() {
     currentProgress = calculateInitialProgress()
     createDraggable()
     createControls()
-    applyToggles()
     renderCarousel(currentProgress)
     startAutoplay()
     window.addEventListener('resize', () => {
@@ -331,7 +330,11 @@ function moveToProgress(progress, direction = 0) {
   }
   target = snapProgress(target)
 
-  if (activeTween) activeTween.stop()
+  if (activeTween) {
+    activeTween.stop()
+    activeTween = null
+    resumeAutoplay() // balance the pause from the tween that won't complete
+  }
 
   let from = currentProgress
   let to = target
@@ -635,7 +638,6 @@ function createDraggable() {
     if (!isDragging) return
     isDragging = false
     wrapper.classList.remove('dragging')
-    moveToProgress(currentProgress)
     if (config.pauseAutoplayOnDrag) resumeAutoplay()
   })
 
@@ -643,7 +645,6 @@ function createDraggable() {
     if (!isDragging) return
     isDragging = false
     wrapper.classList.remove('dragging')
-    moveToProgress(currentProgress)
     if (config.pauseAutoplayOnDrag) resumeAutoplay()
   })
 }
@@ -667,13 +668,6 @@ function createControls() {
     })
   }
 
-  const overflow = document.getElementById('overflow')
-  if (overflow) overflow.addEventListener('change', applyToggles)
-}
-
-function applyToggles() {
-  const overflow = document.getElementById('overflow')
-  wrapper.classList.toggle('show-overflow', overflow ? overflow.checked : config.showOverflow)
 }
 
 // ============================================================
