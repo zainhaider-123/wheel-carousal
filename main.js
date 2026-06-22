@@ -20,7 +20,7 @@ const config = {
     0: 4,
   },
   boxSpacing: {
-    1336: 22,
+    1336: 13,
     1036: 20,
     767: 18,
     0: 16,
@@ -124,6 +124,12 @@ function tween({ from, to, duration, ease = (t) => t, onUpdate, onComplete }) {
 // DOM refs & state
 // ============================================================
 const wrapper = document.querySelector('.wrapper')
+
+// Video popup refs
+const videoModal = document.getElementById('videoModal')
+const videoModalPlayer = document.getElementById('videoModalPlayer')
+const videoModalClose = document.getElementById('videoModalClose')
+const videoModalBackdrop = document.getElementById('videoModalBackdrop')
 
 // Use the boxes already present in the HTML.
 let boxes = toArray('.box', wrapper)
@@ -355,6 +361,42 @@ function activateBox(i) {
 }
 
 // ============================================================
+// Video popup
+// ============================================================
+function openVideoModal(src) {
+  if (!src || !videoModal || !videoModalPlayer) return
+  videoModalPlayer.src = src
+  videoModal.classList.add('is-open')
+  document.body.classList.add('has-video-modal-open')
+  pauseAutoplay()
+  videoModalPlayer.play().catch(() => {})
+}
+
+function closeVideoModal() {
+  if (!videoModal || !videoModalPlayer) return
+  videoModal.classList.remove('is-open')
+  document.body.classList.remove('has-video-modal-open')
+  videoModalPlayer.pause()
+  videoModalPlayer.removeAttribute('src')
+  videoModalPlayer.load()
+  resumeAutoplay()
+}
+
+if (videoModalClose) {
+  videoModalClose.addEventListener('click', closeVideoModal)
+}
+
+if (videoModalBackdrop) {
+  videoModalBackdrop.addEventListener('click', closeVideoModal)
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && videoModal && videoModal.classList.contains('is-open')) {
+    closeVideoModal()
+  }
+})
+
+// ============================================================
 // Marquee instances – duplicate boxes so the loop appears seamless
 // ============================================================
 function removeClones() {
@@ -396,6 +438,15 @@ function buildRenderBoxes() {
         activateBox(i)
         moveToProgress(snapValues[i])
       })
+
+      const playBtn = el.querySelector('.play')
+      if (playBtn) {
+        playBtn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          const videoSrc = boxes[i].querySelector('.box__inner')?.dataset.video
+          openVideoModal(videoSrc)
+        })
+      }
 
       renderBoxes.push({ element: el, originalIndex: i, offset })
     })
@@ -476,6 +527,7 @@ function createDraggable() {
   let startProgress = 0
 
   wrapper.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.play') || e.target.closest('.video-modal')) return
     isDragging = true
     startX = e.clientX
     startProgress = currentProgress

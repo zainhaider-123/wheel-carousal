@@ -24,18 +24,95 @@
 
   <div class="wrapper">
     <div class="draggable">
-      <div class="box">1</div>
-      <div class="box">2</div>
-      <div class="box">3</div>
-      <div class="box">4</div>
-      <div class="box">5</div>
-      <div class="box">6</div>
-      <div class="box">6</div>
-      <div class="box">6</div>
-      <div class="box">6</div>
-      <div class="box">6</div>
-      <div class="box">6</div>
-      <div class="box">6</div>
+      <div class="box">
+        <div class="box__inner" data-video="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4">
+          <img src="./image.jpg" alt="">
+          <svg xmlns="http://www.w3.org/2000/svg" width="82" height="87" viewBox="0 0 82 87" fill="none" class="play">
+            <g filter="url(#filter0_d_1_2448)">
+              <path d="M26.5996 61.1055L27.6437 19.5992L63.0662 41.2566L26.5996 61.1055Z" fill="white" />
+            </g>
+          </svg>
+        </div>
+      </div>
+      <div class="box">
+        <div class="box__inner" data-video="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4">
+          <img src="./image.jpg" alt="">
+          <svg xmlns="http://www.w3.org/2000/svg" width="82" height="87" viewBox="0 0 82 87" fill="none" class="play">
+            <g filter="url(#filter0_d_1_2448)">
+              <path d="M26.5996 61.1055L27.6437 19.5992L63.0662 41.2566L26.5996 61.1055Z" fill="white" />
+            </g>
+          </svg>
+        </div>
+      </div>
+      <div class="box">
+        <div class="box__inner" data-video="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4">
+          <img src="./image.jpg" alt="">
+          <svg xmlns="http://www.w3.org/2000/svg" width="82" height="87" viewBox="0 0 82 87" fill="none" class="play">
+            <g filter="url(#filter0_d_1_2448)">
+              <path d="M26.5996 61.1055L27.6437 19.5992L63.0662 41.2566L26.5996 61.1055Z" fill="white" />
+            </g>
+          </svg>
+        </div>
+      </div>
+      <div class="box">
+        <div class="box__inner" data-video="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4">
+          <img src="./image.jpg" alt="">
+          <svg xmlns="http://www.w3.org/2000/svg" width="82" height="87" viewBox="0 0 82 87" fill="none" class="play">
+            <g filter="url(#filter0_d_1_2448)">
+              <path d="M26.5996 61.1055L27.6437 19.5992L63.0662 41.2566L26.5996 61.1055Z" fill="white" />
+            </g>
+          </svg>
+        </div>
+      </div>
+      <div class="box">
+        <div class="box__inner" data-video="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4">
+          <img src="./image.jpg" alt="">
+          <svg xmlns="http://www.w3.org/2000/svg" width="82" height="87" viewBox="0 0 82 87" fill="none" class="play">
+            <g filter="url(#filter0_d_1_2448)">
+              <path d="M26.5996 61.1055L27.6437 19.5992L63.0662 41.2566L26.5996 61.1055Z" fill="white" />
+            </g>
+          </svg>
+        </div>
+      </div>
+      <div class="box">
+        <div class="box__inner" data-video="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4">
+          <img src="./image.jpg" alt="">
+          <svg xmlns="http://www.w3.org/2000/svg" width="82" height="87" viewBox="0 0 82 87" fill="none" class="play">
+            <g filter="url(#filter0_d_1_2448)">
+              <path d="M26.5996 61.1055L27.6437 19.5992L63.0662 41.2566L26.5996 61.1055Z" fill="white" />
+            </g>
+          </svg>
+        </div>
+      </div>
+      <div class="box">
+        <div class="box__inner" data-video="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4">
+          <img src="./image.jpg" alt="">
+          <svg xmlns="http://www.w3.org/2000/svg" width="82" height="87" viewBox="0 0 82 87" fill="none" class="play">
+            <g filter="url(#filter0_d_1_2448)">
+              <path d="M26.5996 61.1055L27.6437 19.5992L63.0662 41.2566L26.5996 61.1055Z" fill="white" />
+            </g>
+          </svg>
+        </div>
+      </div>
+      <div class="box">
+        <div class="box__inner" data-video="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4">
+          <img src="./image.jpg" alt="">
+          <svg xmlns="http://www.w3.org/2000/svg" width="82" height="87" viewBox="0 0 82 87" fill="none" class="play">
+            <g filter="url(#filter0_d_1_2448)">
+              <path d="M26.5996 61.1055L27.6437 19.5992L63.0662 41.2566L26.5996 61.1055Z" fill="white" />
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video popup modal -->
+  <div class="video-modal" id="videoModal">
+    <div class="video-modal__backdrop" id="videoModalBackdrop"></div>
+    <div class="video-modal__content">
+      <button class="video-modal__close" id="videoModalClose" aria-label="Close video">&times;</button>
+      <video id="videoModalPlayer" controls playsinline></video>
     </div>
   </div>
 
