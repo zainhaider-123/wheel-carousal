@@ -128,6 +128,7 @@ const wrapper = document.querySelector('.wrapper')
 // Video popup refs
 const videoModal = document.getElementById('videoModal')
 const videoModalPlayer = document.getElementById('videoModalPlayer')
+const videoModalFrame = document.getElementById('videoModalFrame')
 const videoModalClose = document.getElementById('videoModalClose')
 const videoModalBackdrop = document.getElementById('videoModalBackdrop')
 
@@ -363,22 +364,82 @@ function activateBox(i) {
 // ============================================================
 // Video popup
 // ============================================================
+function parseVideoUrl(url) {
+  if (!url) return null
+
+  const trimmed = url.trim()
+
+  // YouTube
+  const youtubeRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/
+  const youtubeMatch = trimmed.match(youtubeRegex)
+  if (youtubeMatch) {
+    return {
+      type: 'youtube',
+      embedUrl: `https://www.youtube.com/embed/${youtubeMatch[1]}?autoplay=1&rel=0`
+    }
+  }
+
+  // Vimeo
+  const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/
+  const vimeoMatch = trimmed.match(vimeoRegex)
+  if (vimeoMatch) {
+    return {
+      type: 'vimeo',
+      embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`
+    }
+  }
+
+  // Direct/local video file
+  return {
+    type: 'direct',
+    directUrl: trimmed
+  }
+}
+
 function openVideoModal(src) {
-  if (!src || !videoModal || !videoModalPlayer) return
-  videoModalPlayer.src = src
+  if (!src || !videoModal) return
+
+  const parsed = parseVideoUrl(src)
+  if (!parsed) return
+
+  if (parsed.type === 'direct') {
+    if (videoModalFrame) videoModalFrame.classList.add('is-hidden')
+    if (videoModalPlayer) {
+      videoModalPlayer.classList.remove('is-hidden')
+      videoModalPlayer.src = parsed.directUrl
+    }
+  } else {
+    if (videoModalPlayer) videoModalPlayer.classList.add('is-hidden')
+    if (videoModalFrame) {
+      videoModalFrame.classList.remove('is-hidden')
+      videoModalFrame.src = parsed.embedUrl
+    }
+  }
+
   videoModal.classList.add('is-open')
   document.body.classList.add('has-video-modal-open')
   pauseAutoplay()
-  videoModalPlayer.play().catch(() => {})
+
+  if (parsed.type === 'direct' && videoModalPlayer) {
+    videoModalPlayer.play().catch(() => {})
+  }
 }
 
 function closeVideoModal() {
-  if (!videoModal || !videoModalPlayer) return
+  if (!videoModal) return
   videoModal.classList.remove('is-open')
   document.body.classList.remove('has-video-modal-open')
-  videoModalPlayer.pause()
-  videoModalPlayer.removeAttribute('src')
-  videoModalPlayer.load()
+
+  if (videoModalPlayer) {
+    videoModalPlayer.pause()
+    videoModalPlayer.removeAttribute('src')
+    videoModalPlayer.load()
+  }
+
+  if (videoModalFrame) {
+    videoModalFrame.removeAttribute('src')
+  }
+
   resumeAutoplay()
 }
 

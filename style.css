@@ -110,10 +110,17 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
-.video-modal__content video {
+.video-modal__content video,
+.video-modal__content iframe {
   width: 100%;
   height: 100%;
   display: block;
+  border: none;
+}
+
+.video-modal__content video.is-hidden,
+.video-modal__content iframe.is-hidden {
+  display: none;
 }
 
 .video-modal__close {
