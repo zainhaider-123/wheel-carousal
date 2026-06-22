@@ -1,3 +1,5 @@
+import "./style.css"
+
 // Wheel carousel – pure vanilla JavaScript, no external libraries/CDNs.
 // Replicates the GSAP MotionPath + Draggable behavior from the original main.js.
 
@@ -421,7 +423,7 @@ function openVideoModal(src) {
   pauseAutoplay()
 
   if (parsed.type === 'direct' && videoModalPlayer) {
-    videoModalPlayer.play().catch(() => {})
+    videoModalPlayer.play().catch(() => { })
   }
 }
 
